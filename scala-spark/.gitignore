@@ -73,3 +73,5 @@ project/boot/
 *.properties
 .history
 .cache
+
+*.txt
