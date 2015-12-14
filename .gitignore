@@ -1,4 +1,5 @@
 bin/
 *.gz
-examples/
 output/
+examples1/
+pair.parquet/
