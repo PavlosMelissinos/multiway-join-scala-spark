@@ -1,3 +1,5 @@
+package datagen
+
 import java.io.{File, PrintWriter}
 
 /**
