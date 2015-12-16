@@ -19,11 +19,11 @@ class DatasetGenerator(aSize: Int, bSize: Int, cSize: Int, rSize: Int) {
   private def generateWithPrimaryKey(rel:Char, id: Int) = (rel, id, genString)
 
   private def genR = {
-    val R = 'R'
     val a = random nextInt as.size
     val b = random nextInt bs.size
     val c = random nextInt cs.size
-    (R, a + 1, b + 1, c + 1, genString)
+    val value = random.nextInt
+    ('R', a + 1, b + 1, c + 1, value)
   }
 
   private def tuple2str(tuple: Product): String = tuple.productIterator.toList.mkString(",")
