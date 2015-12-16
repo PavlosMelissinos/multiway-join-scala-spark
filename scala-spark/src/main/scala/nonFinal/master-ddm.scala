@@ -1,67 +1,64 @@
-import org.apache.spark.sql.SQLContext
+import examples.Record
+import org.apache.spark.rdd.RDD
+import org.apache.spark.sql.{DataFrame, SQLContext}
 import org.apache.spark.{SparkContext, SparkConf}
 
 /**
   * Created by ThirstyTM on 2015-12-14.
   */
 
-case class RecordR(key: Int, value: String)
-case class RecordA(key: Int, value: String)
-case class RecordB(key: Int, value: String)
-case class RecordC(key: Int, value: String)
+case class RecordR(a: Int, b: Int, c: Int, value: Int)
+case class RecordA(a: Int, x: String)
+case class RecordB(b: Int, y: String)
+case class RecordC(c: Int, z: String)
 
 object SparkSQLJoin{
+  val currentDir = System.getProperty("user.dir") // get the current directory
+  System.setProperty("hadoop.home.dir", currentDir)
 
-    def sparkConf(n: Int) = new SparkConf().setMaster("local[" + n + "]").setAppName("SparkSQLJoin")
+  def sparkConf(n: Int) = new SparkConf().setMaster("local[" + n + "]").setAppName("SparkSQLJoin")
 
-  def main(args: Array[String]) {
+  def main(args: Array[String]): Unit = {
+    sqlJoin
+  }
+
+  def sqlJoin = {
     val sc = new SparkContext(sparkConf(2))
     val sqlContext = new SQLContext(sc)
-
-    // Importing the SQL context gives access to all the SQL functions and implicit conversions.
+    // this is used to implicitly convert an RDD to a DataFrame.
     import sqlContext.implicits._
 
-    //TODO replace with dataset file
-    val df = sc.parallelize((1 to 100).map(i => RecordR(i, s"val_$i"))).toDF()
-    // Any RDD containing case classes can be registered as a table.  The schema of the table is
-      // automatically inferred using scala reflection.
-      df.registerTempTable("records")
+    val datasetDir = currentDir + java.io.File.separator + "data"
+    val dataset = datasetDir + java.io.File.separator + "dataset.txt"
 
-    // Once tables have been registered, you can run SQL queries over them.
-      println("Result of SELECT *:")
-    sqlContext.sql("SELECT * FROM records").collect().foreach(println)
+    // Create RDDs for each relation and register all of them as tables.
+    val relR = sc.textFile(dataset)
+      .map(_.split(","))
+      .filter(p => p(0) equals "R")
+      .map(p => RecordR(p(1).trim.toInt, p(2).trim.toInt, p(3).trim.toInt, p(4).trim.toInt)).toDF()
+    relR registerTempTable "R"
 
-    // Aggregation queries are also supported.
-    val count = sqlContext.sql("SELECT COUNT(*) FROM records").collect().head.getLong(0)
-    println(s"COUNT(*): $count")
+    val relA = sc.textFile(dataset)
+      .map(_.split(","))
+      .filter(p => p(0).equals("A"))
+      .map(p => RecordA(p(1).trim.toInt, p(2))).toDF()
+    relA registerTempTable "A"
 
-    // The results of SQL queries are themselves RDDs and support all normal RDD functions.  The
-    // items in the RDD are of type Row, which allows you to access each column by ordinal.
-    val rddFromSql = sqlContext.sql("SELECT key, value FROM records WHERE key < 10")
+    val relB = sc.textFile(dataset)
+      .map(_.split(","))
+      .filter(p => p(0).equals("B"))
+      .map(p => RecordB(p(1).trim.toInt, p(2))).toDF()
+    relB registerTempTable "B"
 
-    println("Result of RDD.map:")
-    rddFromSql.map(row => s"Key: ${row(0)}, Value: ${row(1)}").collect().foreach(println)
+    val relC = sc.textFile(dataset)
+      .map(_.split(","))
+      .filter(p => p(0).equals("C"))
+      .map(p => RecordC(p(1).trim.toInt, p(2))).toDF()
+    relC registerTempTable "C"
 
 
-    val currentDir = System.getProperty("user.dir") // get the current directory
-    System.setProperty("hadoop.home.dir", currentDir)
-    // Queries can also be written using a LINQ-like Scala DSL.
-    df.where($"key" === 1).orderBy($"value".asc).select($"key").collect().foreach(println)
+    val joinSQL = sqlContext.sql("SELECT * FROM R, A, B, C WHERE R.a = A.a AND R.b = B.b AND R.c = C.c")
 
-
-    // Write out an RDD as a parquet file.
-    df.write.parquet("pair.parquet")
-
-    // Read in parquet file.  Parquet files are self-describing so the schmema is preserved.
-    val parquetFile = sqlContext.read.parquet("pair.parquet")
-
-    // Queries can be run using the DSL on parequet files just like the original RDD.
-    parquetFile.where($"key" === 1).select($"value".as("a")).collect().foreach(println)
-
-    // These files can also be registered as tables.
-    parquetFile.registerTempTable("parquetFile")
-    sqlContext.sql("SELECT * FROM parquetFile").collect().foreach(println)
-
-    sc.stop()
+    joinSQL.collect().foreach(println)
   }
 }
