@@ -44,6 +44,14 @@ object WordCount {
   }
 }
 
+object SQLJoin {
+  def main(args: Array[String]): Unit = {
+    val inputFile = Array(System.getProperty("user.dir"), "data", "dataset.txt") //create path in array form
+      .mkString(java.io.File.separator) //join into normal path string
+    new SparkSQLJoin(inputFile).sqlJoin //run sql join
+  }
+}
+
 //object PageRank {
 //  def main(args: Array[String]) {
 //    val iters = 10 // number of iterations for pagerank computation

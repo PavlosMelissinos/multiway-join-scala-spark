@@ -12,24 +12,17 @@ case class RecordA(a: Int, x: String)
 case class RecordB(b: Int, y: String)
 case class RecordC(c: Int, z: String)
 
-object SparkSQLJoin{
+class SparkSQLJoin(dataset: String){
   val currentDir = System.getProperty("user.dir") // get the current directory
   System.setProperty("hadoop.home.dir", currentDir)
 
   def sparkConf(n: Int) = new SparkConf().setMaster("local[" + n + "]").setAppName("SparkSQLJoin")
-
-  def main(args: Array[String]): Unit = {
-    sqlJoin
-  }
 
   def sqlJoin = {
     val sc = new SparkContext(sparkConf(2))
     val sqlContext = new SQLContext(sc)
     // this is used to implicitly convert an RDD to a DataFrame.
     import sqlContext.implicits._
-
-    val datasetDir = currentDir + java.io.File.separator + "data"
-    val dataset = datasetDir + java.io.File.separator + "dataset.txt"
 
     // Create RDDs for each relation and register all of them as tables.
     val relR = sc.textFile(dataset)
