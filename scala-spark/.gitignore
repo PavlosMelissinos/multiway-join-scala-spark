@@ -75,3 +75,4 @@ project/boot/
 .cache
 
 *.txt
+*.patch
