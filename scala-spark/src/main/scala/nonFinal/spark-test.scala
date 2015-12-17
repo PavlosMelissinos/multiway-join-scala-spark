@@ -1,6 +1,6 @@
+import nonFinal.SparkJoin
 import org.apache.spark.SparkContext
 import org.apache.spark.SparkConf
-import org.apache.spark.sql
 
 object HelloSpark {
   def main(args: Array[String]): Unit = {
@@ -49,6 +49,15 @@ object SQLJoin {
     val inputFile = Array(System.getProperty("user.dir"), "data", "dataset.txt") //create path in array form
       .mkString(java.io.File.separator) //join into normal path string
     new SparkSQLJoin(inputFile).sqlJoin //run sql join
+  }
+}
+
+object Join{
+  def main(args: Array[String]): Unit = {
+    val inputFile = Array(System.getProperty("user.dir"), "data", "dataset.txt") //create path in array form
+      .mkString(java.io.File.separator) //join into normal path string
+
+    new SparkJoin(inputFile).join //run spark join
   }
 }
 
