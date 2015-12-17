@@ -7,12 +7,12 @@ import org.apache.spark.{SparkContext, SparkConf}
   * Created by ThirstyTM on 2015-12-14.
   */
 
-case class RecordR(a: Int, b: Int, c: Int, value: Int)
-case class RecordA(a: Int, x: String)
-case class RecordB(b: Int, y: String)
-case class RecordC(c: Int, z: String)
-
 class SparkSQLJoin(dataset: String){
+  case class RecordR(a: Int, b: Int, c: Int, value: Int)
+  case class RecordA(a: Int, x: String)
+  case class RecordB(b: Int, y: String)
+  case class RecordC(c: Int, z: String)
+
   val currentDir = System.getProperty("user.dir") // get the current directory
   System.setProperty("hadoop.home.dir", currentDir)
 
@@ -50,7 +50,7 @@ class SparkSQLJoin(dataset: String){
     relC registerTempTable "C"
 
 
-    val joinSQL = sqlContext.sql("SELECT * FROM R, A, B, C WHERE R.a = A.a AND R.b = B.b AND R.c = C.c")
+    val joinSQL = sqlContext.sql("SELECT R.a, R.b, R.c, R.value, A.x, B.y, C.z FROM R, A, B, C WHERE R.a = A.a AND R.b = B.b AND R.c = C.c")
 
     joinSQL.collect().foreach(println)
   }
