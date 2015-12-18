@@ -48,7 +48,10 @@ object SQLJoin {
   def main(args: Array[String]): Unit = {
     val inputFile = Array(System.getProperty("user.dir"), "data", "dataset.txt") //create path in array form
       .mkString(java.io.File.separator) //join into normal path string
-    new SparkSQLJoin(inputFile).sqlJoin //run sql join
+    val outputFile = Array(System.getProperty("user.dir"), "output") //create path in array form
+        .mkString(java.io.File.separator) //join into normal path string
+    val res = new SparkSQLJoin(inputFile).sqlJoin //run sql join
+    res.saveAsTextFile(outputFile)
   }
 }
 
@@ -56,8 +59,11 @@ object Join{
   def main(args: Array[String]): Unit = {
     val inputFile = Array(System.getProperty("user.dir"), "data", "dataset.txt") //create path in array form
       .mkString(java.io.File.separator) //join into normal path string
+    val outputFile = Array(System.getProperty("user.dir"), "output") //create path in array form
+        .mkString(java.io.File.separator) //join into normal path string
 
-    new SparkJoin(inputFile).join //run spark join
+    val res = new SparkJoin(inputFile).join //run spark join
+    res.saveAsTextFile(outputFile)
   }
 }
 
