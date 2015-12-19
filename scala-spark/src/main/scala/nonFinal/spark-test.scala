@@ -1,4 +1,3 @@
-import nonFinal.SparkJoin
 import org.apache.spark.SparkContext
 import org.apache.spark.SparkConf
 
@@ -50,7 +49,7 @@ object SQLJoin {
       .mkString(java.io.File.separator) //join into normal path string
     val outputFile = Array(System.getProperty("user.dir"), "output") //create path in array form
         .mkString(java.io.File.separator) //join into normal path string
-    val res = new SparkSQLJoin(inputFile).sqlJoin //run sql join
+    val res = new SparkJoin(inputFile).sqlJoin //run sql join
     res.saveAsTextFile(outputFile)
   }
 }
