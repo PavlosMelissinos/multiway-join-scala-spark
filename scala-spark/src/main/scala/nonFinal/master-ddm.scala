@@ -15,9 +15,9 @@ class SparkJoin(dataset: String){
   val currentDir = System.getProperty("user.dir") // get the current directory
   System.setProperty("hadoop.home.dir", currentDir)
 
-  def sparkConf(n: Int) = new SparkConf().setMaster("local[" + 8 + "]").setAppName("SparkJoin")
+  def sparkConf(n: Int) = new SparkConf().setMaster("local[" + n + "]").setAppName("SparkJoin")
 
-  val sc = new SparkContext(sparkConf(2))
+  val sc = new SparkContext(sparkConf(8))
   val records = (sc textFile dataset).map(_ split ",")
 
   def sqlJoin : RDD[Row] = {
