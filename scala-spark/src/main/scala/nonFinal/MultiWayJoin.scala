@@ -6,7 +6,7 @@ import org.apache.spark.{SparkContext, SparkConf}
 class StarJoin(dataset: String, reducers: Int) {
   val currentDir = System.getProperty("user.dir") // get the current directory
   System.setProperty("hadoop.home.dir", currentDir)
-  def sparkConf(n: Int) = new SparkConf().setMaster("local[" + n + "]").setAppName("SparkSQLJoin")
+  def sparkConf(n: Int) = new SparkConf().setMaster("local[" + n + "]").setAppName("SparkJoin")
 
   def toRDDs ={
     val sc = new SparkContext(sparkConf(reducers))
@@ -74,7 +74,7 @@ class StarJoin(dataset: String, reducers: Int) {
       ) yield ((i, j, hC(p(1))), (p(2), 'C')) //replicate to i and j
     })
 
-    val joined = relR2.join(relA2).join(relB2).join(relC2) //combine rdds
+    relR2.join(relA2).join(relB2).join(relC2) //combine rdds
 //    joined.foreach(println) //print
 
   }
