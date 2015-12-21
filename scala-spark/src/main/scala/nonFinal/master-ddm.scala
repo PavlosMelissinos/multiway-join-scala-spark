@@ -17,27 +17,29 @@ class SparkJoin(dataset: String){
 
   def sparkConf(n: Int) = new SparkConf().setMaster("local[" + n + "]").setAppName("SparkSQLJoin")
 
+  val sc = new SparkContext(sparkConf(2))
+  val records = (sc textFile dataset).map(_ split ",")
+
   def sqlJoin : RDD[Row] = {
     val sc = new SparkContext(sparkConf(2))
     val sqlContext = new SQLContext(sc)
     // this is used to implicitly convert an RDD to a DataFrame.
     import sqlContext.implicits._
 
-    val records = sc.textFile(dataset).map(_.split(","))
     // Create RDDs for each relation and register all of them as tables.
     val relR = records.filter(p => p(0) equals "R")
       .map(p => RecordR(p(1).trim.toInt, p(2).trim.toInt, p(3).trim.toInt, p(4).trim.toInt)).toDF()
     relR registerTempTable "R"
 
-    val relA = records.filter(p => p(0).equals("A"))
+    val relA = records.filter(p => p(0) equals "A")
       .map(p => RecordA(p(1).trim.toInt, p(2))).toDF()
     relA registerTempTable "A"
 
-    val relB = records.filter(p => p(0).equals("B"))
+    val relB = records.filter(p => p(0) equals "B")
       .map(p => RecordB(p(1).trim.toInt, p(2))).toDF()
     relB registerTempTable "B"
 
-    val relC = records.filter(p => p(0).equals("C"))
+    val relC = records.filter(p => p(0) equals "C")
       .map(p => RecordC(p(1).trim.toInt, p(2))).toDF()
     relC registerTempTable "C"
 
