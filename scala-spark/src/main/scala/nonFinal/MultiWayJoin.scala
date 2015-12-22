@@ -8,10 +8,7 @@ class StarJoin(dataset: String, reducers: Int) {
   System.setProperty("hadoop.home.dir", currentDir)
   def sparkConf(n: Int) = new SparkConf().setMaster("local[" + n + "]").setAppName("SparkJoin")
 
-  def toRDDs ={
-    val sc = new SparkContext(sparkConf(reducers))
-    sc.textFile(dataset).map(_ split ",")
-  }
+  val toRDDs = new SparkContext(sparkConf(reducers)).textFile(dataset).map(_ split ",")
 
   val records: RDD[Array[String]] = toRDDs
 
@@ -30,7 +27,6 @@ class StarJoin(dataset: String, reducers: Int) {
     val d1 = relA.count()
     val d2 = relB.count()
     val d3 = relC.count()
-
 
     val currentDir = System.getProperty("user.dir") // get the current directory
     System.setProperty("hadoop.home.dir", currentDir)

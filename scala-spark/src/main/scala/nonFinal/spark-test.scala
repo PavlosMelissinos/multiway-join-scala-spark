@@ -14,26 +14,27 @@ object EvalAll{
     val outputFile = if (args.size > 2) args(2) else Array(System.getProperty("user.dir"), "output").mkString(java.io.File.separator)
 
     val sj = new SparkJoin(inputFile)
-    println("Spark join, time:" + time(sparkJoin(sj, outputFile)))
+//    println("Spark join, time:" + time(sparkJoin(sj, outputFile + java.io.File.separator + "sparkJoin")))
 
-    println("Sql join, time:" + time(sqlJoin(sj, outputFile)))
+//    println("Sql join, time:" + time(sqlJoin(sj, outputFile + java.io.File.separator + "sqlJoin")))
 
-    println("Star join," + reducers + " reducers, time:" + time(starJoin(sj, outputFile, reducers)))
+    println("Star join," + reducers + " reducers, time:" + time(starJoin(sj, outputFile + java.io.File.separator + "starJoin", reducers)))
   }
 
+  def sqlJoin(sj: SparkJoin, saveDir:String): Unit = {
+    val res = sj.sqlJoin //run sql join
+    res.foreach(println)
+    res.write.save(saveDir)
+  }
 
-  def sqlJoin(sc: SparkJoin, saveDir:String): Unit = {
-    val res = sc.sqlJoin //run spark join
+  def sparkJoin(sj: SparkJoin, saveDir:String): Unit = {
+    val res = sj.join //run spark join
     res.saveAsTextFile(saveDir)
   }
 
-  def sparkJoin(sc: SparkJoin, saveDir:String): Unit = {
-    val res = sc.join //run spark join
-    res.saveAsTextFile(saveDir)
-  }
-
-  def starJoin(sc: SparkJoin, saveDir:String, reducers: Int): Unit = {
-    val res = sc.starJoin(reducers)
-    res.saveAsTextFile(saveDir)
+  def starJoin(sj: SparkJoin, saveDir:String, reducers: Int): Unit = {
+    val res = sj.starJoin(reducers)
+    res._1.saveAsTextFile(saveDir)
+    println(res._2)
   }
 }

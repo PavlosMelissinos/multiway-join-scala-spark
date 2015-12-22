@@ -1,9 +1,5 @@
 package datagen
 
-/**
-  * Created by ThirstyTM on 2015-12-15.
-  */
-
 object datagen {
   val aSize = 10
   val bSize = 10
