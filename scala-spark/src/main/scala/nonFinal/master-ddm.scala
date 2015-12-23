@@ -6,10 +6,12 @@ import org.apache.spark.{SparkContext, SparkConf}
   * Created by ThirstyTM on 2015-12-14.
   */
 
-case class RecordR(a: Int, b: Int, c: Int, value: Int)
-case class RecordA(a: Int, x: String)
-case class RecordB(b: Int, y: String)
-case class RecordC(c: Int, z: String)
+abstract class Record
+case class RecordR(a: Int, b: Int, c: Int, value: Int) extends Record
+case class RecordA(a: Int, x: String) extends Record
+case class RecordB(b: Int, y: String) extends Record
+case class RecordC(c: Int, z: String) extends Record
+case class KeyMap(i: Int, j: Int, k: Int)
 
 class SparkJoin(dataset: String){
 
@@ -17,7 +19,7 @@ class SparkJoin(dataset: String){
   System.setProperty("hadoop.home.dir", currentDir)
 
   val sparkConf = (n: Int) => new SparkConf().setMaster("local[" + n + "]").setAppName("SparkJoin")
-  val cores = Runtime.getRuntime.availableProcessors
+  val cores = Runtime.getRuntime.availableProcessors //specify as many cores as the actual machine cores (physical or logical)
   val sc = new SparkContext(sparkConf(cores))
   val records = (sc textFile dataset).map(_ split ",")
 
@@ -113,54 +115,70 @@ class SparkJoin(dataset: String){
     //    def toInt(a: String) = a.trim.toInt
 
 //    def mapFun(x: Array[String]): Array[String] = x match {
-    val mapFun: (Array[String] => Array[String]) = (x: Array[String]) => x match {
-      case Array("R", a: String, b: String, c: String, value: String) => ((hA(a), hB(b), hC(c)), (value, 'R'))
-      case Array("A", a: String, x: String)  => for {j <- 1 to b; k <- 1 to c} yield ((hA(a), j, k), (x, 'A'))
-      case Array("B", b: String, y)          => for {i <- 1 to a; k <- 1 to c} yield ((i, hB(b), k), (y, 'B'))
-      case Array("C", c, z)                  => for {i <- 1 to a; j <- 1 to b} yield ((i, j, hC(c)), (z, 'C'))
-    }
+//    val mapFun: (Array[String] => Array[String]) = (x: Array[String]) => x match {
 
-//    def mapFun (rec: Array[String])= {
-////      rec match {
-////        case ("R", a, b, c, value) => (hA(a), hB(b), hC(c))
-////      }
-//      if (rec(0) equals "R") {
-//        val res = Tuple2((hA(rec(1)), hB(rec(2)), hC(rec(3))), //new key
-//          (rec(3).trim.toInt, 'R'))
-//        return res
-//      }
-//      else if (rec(0) equals "A") {
-//        val res = for {
-//          j <- 1 to b;
-//          k <- 1 to c
-//        } yield ((hA(rec(1)), j, k), (rec(2), 'A'))
-//        return res
-//      }
-//      else if (rec(0) equals "B") {
-//        val res = for {
-//          i <- 1 to a;
-//          k <- 1 to c
-//        } yield ((i, hB(rec(1)), k), (rec(2), 'B'))
-//        return res
-//      }
-//      else if (rec(0) equals "C") {
-//        val res = for {
-//          i <- 1 to a;
-//          j <- 1 to b
-//        } yield ((i, j, hC(rec(1))), (rec(2), 'C'))
-//        return res
-//      }
-//      else return null
+//    def mapFun(r: Record) = r match {
+//      case RecordR => ((hA(r.a), r.b % b, r.c), (r.value, 'R'))
+//      case Array("A", a: String, x: String)  => for {j <- 1 to b; k <- 1 to c} yield ((hA(a), j, k), (x, 'A'))
+//      case Array("B", b: String, y)          => for {i <- 1 to a; k <- 1 to c} yield ((i, hB(b), k), (y, 'B'))
+//      case Array("C", c, z)                  => for {i <- 1 to a; j <- 1 to b} yield ((i, j, hC(c)), (z, 'C'))
 //    }
+
+//    val toRecord = (sarr: Array[String]) => {
+//      if (sarr(0) equals "R")
+//    }
+    def mapFun (rec: Array[String]): Seq[((Int, Int, Int), (Any, Char))]= {
+//      rec match {
+//        case ("R", a, b, c, value) => (hA(a), hB(b), hC(c))
+//      }
+      if (rec(0) equals "R") {
+//      if (rec.isInstanceOf[RecordR]) {
+        val recR = rec.asInstanceOf[RecordR]
+        Seq(((recR.a % a, recR.b % b, recR.c % c), (recR.value, 'R'))) //new key
+//        List((recR.a % a, recR.b % b, recR.c % c), (recR.value, 'R'))
+      }
+      else if (rec(0) equals "A") {
+//      else if (rec.isInstanceOf[RecordA]) {
+        val recA = rec.asInstanceOf[RecordA]
+        for {
+          j <- 1 to b;
+          k <- 1 to c
+        } yield ((recA.a % a, j, k), (recA.x, 'A'))
+//        return res
+//        res
+      }
+      else if (rec(0) equals "B") {
+//      else if (rec.isInstanceOf[RecordB]) {
+        val recB = rec.asInstanceOf[RecordB]
+        for {
+          i <- 1 to a;
+          k <- 1 to c
+        } yield ((i, recB.b % b, k), (recB.y, 'B'))
+//        return res
+      }
+      else if (rec(0) equals "C") {
+//      else if (rec.isInstanceOf[RecordC]) {
+        val recC = rec.asInstanceOf[RecordC]
+        for {
+          i <- 1 to a;
+          j <- 1 to b
+        } yield ((i, j, recC.c % c), (recC.z, 'C'))
+//        return res
+      }
+      else {
+        return Seq[((0, 0, 0), "Sss", 'O')]
+      }
+//      else return null
+    }
 
 //    val redFun: ((Tuple2, Tuple2) => Tuple2) = (kv1: Tuple2, kv2: Tuple2) => {
 //      kv1._2
 //      kv2._2
 //    }
 //    import org.apache.spark.SparkContext._
-    val mapped = records.map(mapFun)
+    val mapped = records.flatMap(mapFun)
     mapped.foreach(println)
-    val res = mapped.reduce((a, b) => a ++ b)
+//    val res = mapped.reduceByKey(_ + _)
 //
 //    (res, "joint a assigned to " + a + " reducers, joint b assigned to " + b + " reducers, joint c assigned to " + c + " reducers,")
   }

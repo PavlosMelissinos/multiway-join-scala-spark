@@ -1,5 +1,6 @@
 package datagen
 
+
 object datagen {
   val aSize = 10
   val bSize = 10
