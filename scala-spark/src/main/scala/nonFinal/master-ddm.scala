@@ -109,10 +109,9 @@ class SparkJoin(dataset: String){
     val c = Math.cbrt(k * d3 * d3 / (d1 * d2)).toInt
 
     //hash functions mapping each record to a reducer
-    val hA = (n: String) => n.trim.toInt % a
-    val hB = (n: String) => n.trim.toInt % b
-    val hC = (n: String) => n.trim.toInt % c
-    //    def toInt(a: String) = a.trim.toInt
+    val hA = (n: String) => 1 + (n.trim.toInt % a)
+    val hB = (n: String) => 1 + (n.trim.toInt % b)
+    val hC = (n: String) => 1 + (n.trim.toInt % c)
 
 //    def mapFun(x: Array[String]): Array[String] = x match {
 //    val mapFun: (Array[String] => Array[String]) = (x: Array[String]) => x match {
@@ -123,52 +122,43 @@ class SparkJoin(dataset: String){
 //      case Array("B", b: String, y)          => for {i <- 1 to a; k <- 1 to c} yield ((i, hB(b), k), (y, 'B'))
 //      case Array("C", c, z)                  => for {i <- 1 to a; j <- 1 to b} yield ((i, j, hC(c)), (z, 'C'))
 //    }
-
+//
 //    val toRecord = (sarr: Array[String]) => {
 //      if (sarr(0) equals "R")
+//        RecordR(sarr(1).trim.toInt, sarr(2).trim.toInt, sarr(3).trim.toInt, sarr(4).trim.toInt)
 //    }
-    def mapFun (rec: Array[String]): Seq[((Int, Int, Int), (Any, Char))]= {
-//      rec match {
-//        case ("R", a, b, c, value) => (hA(a), hB(b), hC(c))
-//      }
-      if (rec(0) equals "R") {
-//      if (rec.isInstanceOf[RecordR]) {
-        val recR = rec.asInstanceOf[RecordR]
-        Seq(((recR.a % a, recR.b % b, recR.c % c), (recR.value, 'R'))) //new key
-//        List((recR.a % a, recR.b % b, recR.c % c), (recR.value, 'R'))
+    val mapFun = (sArr: Array[String]) => {
+      sArr(0) match{
+        case "R" => {
+//          val recR = rec.asInstanceOf[RecordR]
+          val recR = RecordR(sArr(1).trim.toInt, sArr(2).trim.toInt, sArr(3).trim.toInt, sArr(4).trim.toInt)
+          Seq(((recR.a % a + 1, recR.b % b + 1, recR.c % c + 1), (recR.value, 'R')))
+        }
+        case "A" => {
+          val recA = RecordA(sArr(1).trim.toInt, sArr(2).trim)
+          val res = for {
+            j <- 1 to b;
+            k <- 1 to c
+          } yield ((recA.a % a + 1, j, k), (recA.x, 'A'))
+          res
+        }
+        case "B" => {
+          val recB = RecordB(sArr(1).trim.toInt, sArr(2).trim)
+          val res = for {
+            i <- 1 to a;
+            k <- 1 to c
+          } yield ((i, recB.b % b + 1, k), (recB.y, 'B'))
+          res
+        }
+        case "C" => {
+          val recC = RecordC(sArr(1).trim.toInt, sArr(2).trim)
+          val res = for {
+            i <- 1 to a;
+            j <- 1 to b
+          } yield ((i, j, recC.c % c + 1), (recC.z, 'C'))
+          res
+        }
       }
-      else if (rec(0) equals "A") {
-//      else if (rec.isInstanceOf[RecordA]) {
-        val recA = rec.asInstanceOf[RecordA]
-        for {
-          j <- 1 to b;
-          k <- 1 to c
-        } yield ((recA.a % a, j, k), (recA.x, 'A'))
-//        return res
-//        res
-      }
-      else if (rec(0) equals "B") {
-//      else if (rec.isInstanceOf[RecordB]) {
-        val recB = rec.asInstanceOf[RecordB]
-        for {
-          i <- 1 to a;
-          k <- 1 to c
-        } yield ((i, recB.b % b, k), (recB.y, 'B'))
-//        return res
-      }
-      else if (rec(0) equals "C") {
-//      else if (rec.isInstanceOf[RecordC]) {
-        val recC = rec.asInstanceOf[RecordC]
-        for {
-          i <- 1 to a;
-          j <- 1 to b
-        } yield ((i, j, recC.c % c), (recC.z, 'C'))
-//        return res
-      }
-      else {
-        return Seq[((0, 0, 0), "Sss", 'O')]
-      }
-//      else return null
     }
 
 //    val redFun: ((Tuple2, Tuple2) => Tuple2) = (kv1: Tuple2, kv2: Tuple2) => {
