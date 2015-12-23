@@ -68,7 +68,14 @@ class SparkJoin(dataset: String){
     relRxAxB.join(relCFinal).map{case(key, ((a, b, c, value, x, y), z)) => (a, b, c, value, x, y, z)}
   }
 
-  def assignAttrShares(reducers: Int): (Int, Int, Int) ={
+
+  /**
+    * a = sqrt3(k * d1 * d1 / (d2 * d3))
+    * b = sqrt3(k * d2 * d2 / (d1 * d3))
+    * c = sqrt3(k * d3 * d3 / (d1 * d2))
+    * d
+    */
+  def getAttrShares(reducers: Int): (Int, Int, Int) ={
     val d1 = rel("A").count()
     val d2 = rel("B").count()
     val d3 = rel("C").count()
@@ -81,17 +88,11 @@ class SparkJoin(dataset: String){
     (a, b, c)
   }
 
-  /**
-    * a = sqrt3(k * d1 * d1 / (d2 * d3))
-    * b = sqrt3(k * d2 * d2 / (d1 * d3))
-    * c = sqrt3(k * d3 * d3 / (d1 * d2))
-    * d
-    */
   def starJoin (reducers: Int) = {
 
     val currentDir = System.getProperty("user.dir") // get the current directory
     System.setProperty("hadoop.home.dir", currentDir)
-    val (a, b, c) = assignAttrShares(reducers: Int)
+    val (a, b, c) = getAttrShares(reducers: Int)
 
     //hash functions matching each record value to a partial mapkey
     val hashFun = (n: Int, sz: Int) => n % sz + 1
