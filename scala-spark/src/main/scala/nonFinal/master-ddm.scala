@@ -69,21 +69,23 @@ class SparkJoin(dataset: String){
 
   /**
     * k is the number of reducers
-    * a = sqrt3(k * d1 * d1 / (d2 * d3))
-    * b = sqrt3(k * d2 * d2 / (d1 * d3))
-    * c = sqrt3(k * d3 * d3 / (d1 * d2))
-    * d
+    * a = sqrt3(k * d1 * d1 / (d2 * d3)) = d1 * Math.cbrt(k / d)
+    * b = sqrt3(k * d2 * d2 / (d1 * d3)) = d2 * Math.cbrt(k / d)
+    * c = sqrt3(k * d3 * d3 / (d1 * d2)) = d3 * Math.cbrt(k / d)
+    * the reducers are logically (not physically) placed in the 3d plane according to each join attribute
+    * for example,
     */
-  def getAttrShares(reducers: Int): (Int, Int, Int) ={
+  def getAttrShares(reducers: Int): (Long, Long, Long) ={
     val d1 = rel("A").count()
     val d2 = rel("B").count()
     val d3 = rel("C").count()
+    val d = d1 + d2 + d3
 
     //compute attribute shares a,b,c according to the paper's instructions
     val k = reducers // = a * b * c
-    val a = Math.cbrt(k * d1 * d1 / (d2 * d3)).toInt
-    val b = Math.cbrt(k * d2 * d2 / (d1 * d3)).toInt
-    val c = Math.cbrt(k * d3 * d3 / (d1 * d2)).toInt
+    val a = d1 * Math.cbrt(k / d).toInt
+    val b = d2 * Math.cbrt(k / d).toInt
+    val c = d3 * Math.cbrt(k / d).toInt
     (a, b, c)
   }
 
@@ -92,41 +94,46 @@ class SparkJoin(dataset: String){
     val (a, b, c) = getAttrShares(reducers: Int)
 
     //hash functions matching each record value to a partial mapkey
-    val hashFun = (n: Int, sz: Int) => n % sz + 1
+    val hashFun = (n: Int, sz: Long) => n % sz + 1
     val hA = (n: Int) => hashFun(n, a)
     val hB = (n: Int) => hashFun(n, b)
     val hC = (n: Int) => hashFun(n, c)
 
     //mapper: assigns a unique mapkey to each record
-    val mapFun: (Array[String] => Seq[((Int, Int, Int), (String, String))]) = (sArr: Array[String]) => {
+    val mapFun: (Array[String] => Seq[((Long, Long, Long), (String, String))]) = (sArr: Array[String]) => {
       sArr(0) match{
         case "R" => {
           val recR = RecordR(sArr(1).trim.toInt, sArr(2).trim.toInt, sArr(3).trim.toInt, sArr(4).trim.toInt)
           val sValue = sArr(1) + "," + sArr(2) + "," + sArr(3) + "," + sArr(4)
           Seq(((hA(recR.a), hB(recR.b), hC(recR.c)), (sValue, "R")))
         }
+
+          //in this case, A is to be joined on its 'a' attribute
+          // therefore, it will be sent to reducers (hash(a), j, k) for every 1 <= j <= b (the attrbute share of b)
+          // and 1 <= k <= c (the attribute share of c)
+          // What the above means geometrically is that this relation is spread across the plane of the producers that
         case "A" => {
           val recA = RecordA(sArr(1).trim.toInt, sArr(2).trim)
           val sValue = sArr(2)
           for {
-            j <- 1 to b;
-            k <- 1 to c
+            j <- 1L to b;
+            k <- 1L to c
           } yield ((hA(recA.a), j, k), (sValue, "A"))
         }
         case "B" => {
           val recB = RecordB(sArr(1).trim.toInt, sArr(2).trim)
           val sValue = sArr(2)
           for {
-            i <- 1 to a;
-            k <- 1 to c
+            i <- 1L to a;
+            k <- 1L to c
           } yield ((i, hB(recB.b), k), (sValue, "B"))
         }
         case "C" => {
           val recC = RecordC(sArr(1).trim.toInt, sArr(2).trim)
           val sValue = sArr(2)
           for {
-            i <- 1 to a;
-            j <- 1 to b
+            i <- 1L to a;
+            j <- 1L to b
           } yield ((i, j, hC(recC.c)), (sValue, "C"))
         }
       }
@@ -149,7 +156,13 @@ class SparkJoin(dataset: String){
     val saveDir = Array(System.getProperty("user.dir"), "output", "starJoinMapped").mkString(java.io.File.separator)
     mapped.saveAsTextFile(saveDir)
 
-    //reduce
+    //reduce - Doesn't work, as the keys are messed up
+    // Alternatively, the following could work:
+    // a custom partitioner could be used to assign each record to a reducer according to the mapkeys specified by the paper
+    // map data by join attributes (practically just assign keys)
+    // After that, the reducer would just merge
     mapped.reduceByKey((a, b) => redFun(a, b))
+
+    //The extra partitioning step shouldn't be much of an overhead, as it's essentially the same procedure followed here
   }
 }

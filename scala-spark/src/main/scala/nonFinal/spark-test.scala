@@ -6,15 +6,15 @@ object EvalAll{
   }
   def sqlJoin(sj: SparkJoin, saveDir:String): Unit = {
     val res = sj.sqlJoin //run sql join
-    res.write.save(saveDir)
+    res.write save saveDir
   }
   def sparkJoin(sj: SparkJoin, saveDir:String): Unit = {
     val res = sj.join //run spark join
-    res.saveAsTextFile(saveDir)
+    res saveAsTextFile saveDir
   }
   def starJoin(sj: SparkJoin, saveDir:String, reducers: Int): Unit = {
     val res = sj.starJoin(reducers)
-    res.saveAsTextFile(saveDir)
+    res saveAsTextFile saveDir
   }
 
   def main(args: Array[String]): Unit = {
