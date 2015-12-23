@@ -2,10 +2,6 @@ import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.{Row, DataFrame, SQLContext}
 import org.apache.spark.{SparkContext, SparkConf}
 
-/**
-  * Created by ThirstyTM on 2015-12-14.
-  */
-
 abstract class Record
 case class RecordR(a: Int, b: Int, c: Int, value: Int) extends Record
 case class RecordA(a: Int, x: String) extends Record
@@ -19,8 +15,11 @@ class SparkJoin(dataset: String){
   System.setProperty("hadoop.home.dir", currentDir)
 
   val sparkConf = (n: Int) => new SparkConf().setMaster("local[" + n + "]").setAppName("SparkJoin")
-  val cores = Runtime.getRuntime.availableProcessors //specify as many cores as the actual machine cores (physical or logical)
+
+  //specify as many spark cores as the actual cpu cores (physical or logical)
+  val cores = Runtime.getRuntime.availableProcessors
   val sc = new SparkContext(sparkConf(cores))
+
   val records = (sc textFile dataset).map(_ split ",")
 
   //split relations by type
@@ -31,7 +30,7 @@ class SparkJoin(dataset: String){
     // this is used to implicitly convert an RDD to a DataFrame.
     import sqlContext.implicits._
 
-    // Create RDDs for each relation and register all of them as tables.
+    // Create RDDs for each relation and register each of them as a table.
     val relRFinal = rel("R").map(p => RecordR(p(1).trim.toInt, p(2).trim.toInt, p(3).trim.toInt, p(4).trim.toInt)).toDF()
     relRFinal registerTempTable "R"
 
@@ -44,8 +43,7 @@ class SparkJoin(dataset: String){
     val relCFinal = rel("C").map(p => RecordC(p(1).trim.toInt, p(2))).toDF()
     relCFinal registerTempTable "C"
 
-    val joinSQL = sqlContext.sql("SELECT R.a, R.b, R.c, R.value, A.x, B.y, C.z FROM R, A, B, C WHERE R.a = A.a AND R.b = B.b AND R.c = C.c")
-    joinSQL
+    sqlContext.sql("SELECT R.a, R.b, R.c, R.value, A.x, B.y, C.z FROM R, A, B, C WHERE R.a = A.a AND R.b = B.b AND R.c = C.c")
   }
 
   //Performs "chained" join in the following order ((R x A) x B) x C
@@ -70,6 +68,7 @@ class SparkJoin(dataset: String){
 
 
   /**
+    * k is the number of reducers
     * a = sqrt3(k * d1 * d1 / (d2 * d3))
     * b = sqrt3(k * d2 * d2 / (d1 * d3))
     * c = sqrt3(k * d3 * d3 / (d1 * d2))
@@ -90,8 +89,6 @@ class SparkJoin(dataset: String){
 
   def starJoin (reducers: Int) = {
 
-    val currentDir = System.getProperty("user.dir") // get the current directory
-    System.setProperty("hadoop.home.dir", currentDir)
     val (a, b, c) = getAttrShares(reducers: Int)
 
     //hash functions matching each record value to a partial mapkey
@@ -145,8 +142,14 @@ class SparkJoin(dataset: String){
     }
 
     val mapped = records.flatMap(mapFun) //assigns a mapkey to each record
+
+    //saving middle state to disk
+    //despite doing that, it seems that star join is still much faster than chained binary joins and sql join
+    //
     val saveDir = Array(System.getProperty("user.dir"), "output", "starJoinMapped").mkString(java.io.File.separator)
     mapped.saveAsTextFile(saveDir)
+
+    //reduce
     mapped.reduceByKey((a, b) => redFun(a, b))
   }
 }
