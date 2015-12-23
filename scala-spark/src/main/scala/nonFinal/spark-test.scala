@@ -34,7 +34,7 @@ object EvalAll{
 
   def starJoin(sj: SparkJoin, saveDir:String, reducers: Int): Unit = {
     val res = sj.starJoin(reducers)
-//    res._1.saveAsTextFile(saveDir)
+    res.saveAsTextFile(saveDir)
 //    println(res._2)
   }
 }

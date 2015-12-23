@@ -102,74 +102,71 @@ class SparkJoin(dataset: String){
     val currentDir = System.getProperty("user.dir") // get the current directory
     System.setProperty("hadoop.home.dir", currentDir)
 
-    //compute a,b,c according to the paper's instructions
+    //compute attribute shares a,b,c according to the paper's instructions
     val k = reducers // = a * b * c
     val a = Math.cbrt(k * d1 * d1 / (d2 * d3)).toInt
     val b = Math.cbrt(k * d2 * d2 / (d1 * d3)).toInt
     val c = Math.cbrt(k * d3 * d3 / (d1 * d2)).toInt
 
-    //hash functions mapping each record to a reducer
+    //hash functions matching each record value to a partial mapkey
     val hA = (n: String) => 1 + (n.trim.toInt % a)
     val hB = (n: String) => 1 + (n.trim.toInt % b)
     val hC = (n: String) => 1 + (n.trim.toInt % c)
 
-//    def mapFun(x: Array[String]): Array[String] = x match {
-//    val mapFun: (Array[String] => Array[String]) = (x: Array[String]) => x match {
-
-//    def mapFun(r: Record) = r match {
-//      case RecordR => ((hA(r.a), r.b % b, r.c), (r.value, 'R'))
-//      case Array("A", a: String, x: String)  => for {j <- 1 to b; k <- 1 to c} yield ((hA(a), j, k), (x, 'A'))
-//      case Array("B", b: String, y)          => for {i <- 1 to a; k <- 1 to c} yield ((i, hB(b), k), (y, 'B'))
-//      case Array("C", c, z)                  => for {i <- 1 to a; j <- 1 to b} yield ((i, j, hC(c)), (z, 'C'))
-//    }
-//
-//    val toRecord = (sarr: Array[String]) => {
-//      if (sarr(0) equals "R")
-//        RecordR(sarr(1).trim.toInt, sarr(2).trim.toInt, sarr(3).trim.toInt, sarr(4).trim.toInt)
-//    }
-    val mapFun = (sArr: Array[String]) => {
+    //mapper: assigns a unique mapkey to each record
+    val mapFun: (Array[String] => Seq[((Int, Int, Int), (String, String))]) = (sArr: Array[String]) => {
       sArr(0) match{
         case "R" => {
 //          val recR = rec.asInstanceOf[RecordR]
           val recR = RecordR(sArr(1).trim.toInt, sArr(2).trim.toInt, sArr(3).trim.toInt, sArr(4).trim.toInt)
-          Seq(((recR.a % a + 1, recR.b % b + 1, recR.c % c + 1), (recR.value, 'R')))
+          val sValue = sArr(1) + "," + sArr(2) + "," + sArr(3) + "," + sArr(4)
+          Seq(((recR.a % a + 1, recR.b % b + 1, recR.c % c + 1), (sValue, "R")))
         }
         case "A" => {
           val recA = RecordA(sArr(1).trim.toInt, sArr(2).trim)
+          val sValue = sArr(1) + "," + sArr(2)
           val res = for {
             j <- 1 to b;
             k <- 1 to c
-          } yield ((recA.a % a + 1, j, k), (recA.x, 'A'))
+          } yield ((recA.a % a + 1, j, k), (sValue, "A"))
           res
         }
         case "B" => {
           val recB = RecordB(sArr(1).trim.toInt, sArr(2).trim)
+          val sValue = sArr(1) + "," + sArr(2)
           val res = for {
             i <- 1 to a;
             k <- 1 to c
-          } yield ((i, recB.b % b + 1, k), (recB.y, 'B'))
+          } yield ((i, recB.b % b + 1, k), (sValue, "B"))
           res
         }
         case "C" => {
           val recC = RecordC(sArr(1).trim.toInt, sArr(2).trim)
+          val sValue = sArr(1) + "," + sArr(2)
           val res = for {
             i <- 1 to a;
             j <- 1 to b
-          } yield ((i, j, recC.c % c + 1), (recC.z, 'C'))
+          } yield ((i, j, recC.c % c + 1), (sValue, "C"))
           res
         }
       }
     }
 
-//    val redFun: ((Tuple2, Tuple2) => Tuple2) = (kv1: Tuple2, kv2: Tuple2) => {
-//      kv1._2
-//      kv2._2
-//    }
-//    import org.apache.spark.SparkContext._
+    val redFun = (a: (String, String), b: (String, String)) => {
+      if (a._2.equals(b._2))
+        (a._1, a._2)
+      else
+        (a._1 + "," + b._1, "(" + a._2 + "x" + b._2 + ")")
+//        (a._1 + "," + b._1, "(" + a._2 + "x" + b._2 + ")")
+    }
+
     val mapped = records.flatMap(mapFun)
-    mapped.foreach(println)
-//    val res = mapped.reduceByKey(_ + _)
-//
-//    (res, "joint a assigned to " + a + " reducers, joint b assigned to " + b + " reducers, joint c assigned to " + c + " reducers,")
+//    mapped.foreach(println)
+    val saveDir = Array(System.getProperty("user.dir"), "output", "starJoinMapped").mkString(java.io.File.separator)
+    mapped.saveAsTextFile(saveDir)
+//    val partitioned = mapped.partitionBy()
+    val res = mapped.reduceByKey((a, b) => redFun(a, b))
+    res
+//    res.values.map(a => a._1)
   }
 }
