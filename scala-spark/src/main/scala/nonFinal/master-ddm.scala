@@ -1,5 +1,5 @@
 import org.apache.spark.rdd.RDD
-import org.apache.spark.sql.{Row, DataFrame, SQLContext}
+import org.apache.spark.sql.{DataFrame, SQLContext}
 import org.apache.spark.{SparkContext, SparkConf}
 
 abstract class Record
@@ -109,7 +109,7 @@ class SparkJoin(dataset: String){
         }
 
           //in this case, A is to be joined on its 'a' attribute
-          // therefore, it will be sent to reducers (hash(a), j, k) for every 1 <= j <= b (the attrbute share of b)
+          // therefore, it will be sent to reducers (hash(a), j, k) for every 1 <= j <= b (the attribute share of b)
           // and 1 <= k <= c (the attribute share of c)
           // What the above means geometrically is that this relation is spread across the plane of the producers that
         case "A" => {
@@ -152,7 +152,6 @@ class SparkJoin(dataset: String){
 
     //saving middle state to disk
     //despite doing that, it seems that star join is still much faster than chained binary joins and sql join
-    //
     val saveDir = Array(System.getProperty("user.dir"), "output", "starJoinMapped").mkString(java.io.File.separator)
     mapped.saveAsTextFile(saveDir)
 

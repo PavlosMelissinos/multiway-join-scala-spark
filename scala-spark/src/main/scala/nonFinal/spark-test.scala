@@ -23,10 +23,10 @@ object EvalAll{
     val outputFile = if (args.size > 2) args(2) else Array(System.getProperty("user.dir"), "output").mkString(java.io.File.separator)
 
     val sj = new SparkJoin(inputFile)
-    println("Spark join, time:" + time(sparkJoin(sj, outputFile + java.io.File.separator + "sparkJoin")))
-    println("Sql join, time:" + time(sqlJoin(sj, outputFile + java.io.File.separator + "sqlJoin")))
+//    println("Spark join, time:" + time(sparkJoin(sj, outputFile + java.io.File.separator + "sparkJoin")))
+//    println("Sql join, time:" + time(sqlJoin(sj, outputFile + java.io.File.separator + "sqlJoin")))
     println("Star join, " + reducers + " reducers, time:" + time(starJoin(sj, outputFile + java.io.File.separator + "starJoin", reducers)))
     val (a, b, c) = sj.getAttrShares(reducers)
-    println("Distribution of reducers: (a: " + a + ", b: " + b + ", c: " + c + ")")
+    println("Distribution of reducers (star join): (a: " + a + ", b: " + b + ", c: " + c + ")")
   }
 }
